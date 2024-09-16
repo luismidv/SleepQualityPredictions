@@ -8,6 +8,8 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
+from sklearn.feature_selection import mutual_info_regression
+import seaborn as sns
 
 class sleeppredictions:
     X_train = []
@@ -87,11 +89,40 @@ class sleeppredictions:
         #mae = mean_absolute_error(preds ,self.y_valid)
         #print(mae)
 
+    def check_mutual_information(self,data):
+        x = data.copy()
+        y = x.pop('Sleep Quality')
+        print(y)
+        
+        for colname in x.select_dtypes("object"):
+            x[colname], _ = x[colname].factorize()
+        
+        discrete_features = x.dtypes == int
+        mi_scores = mutual_info_regression(x,y,discrete_features = discrete_features)
+        mi_scores = pd.Series(mi_scores,name = "MI scores",index=x.columns)
+        mi_scores = mi_scores.sort_values(ascending = True)
+        width = np.arange(len(mi_scores))
+        ticks = list(mi_scores.index)
+        
+        plt.barh(width, mi_scores)
+        plt.yticks(width,ticks)
+        plt.title("Mutual Information Scores")
+        sns.relplot(x="Calories Burned", y ="Sleep Quality", data = data)
+        plt.show()
+
+        
+        plt.show()
+        
+        
+        
+
 data = pd.read_csv('data/Health_Sleep_Statistics.csv')
 sleep1 = sleeppredictions(data)
-sleep1.dataset_description()
-sleep1.show_specific_column('Age')
-sleep1.identify_null_values()
+
+#sleep1.dataset_description()
+#sleep1.show_specific_column('Age')
+#sleep1.identify_null_values()
 sleep1.divide_data_train_valid()
 sleep1.check_categorical_numerical_data()
-sleep1.data_preprocessing()
+#sleep1.data_preprocessing()
+sleep1.check_mutual_information(data)
