@@ -10,6 +10,12 @@ from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_selection import mutual_info_regression
 import seaborn as sns
+from sklearn.model_selection import GridSearchCV
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.svm import SVR
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Lasso
 
 class sleeppredictions:
     X_train = []
@@ -112,6 +118,71 @@ class sleeppredictions:
 
         
         plt.show()
+
+    def gridsearch_applying(self,data):
+        models = {
+            'linear regression' : {
+                'model' : LinearRegression(),
+                'parameters': {
+
+                }
+            },
+
+            'lasso' : {
+                'model': Lasso(),
+                'parameters': {
+                    'alpha': [1,2],
+                    'selection' : ['random', 'cyclic']
+                }
+            },
+
+            'svr' : {
+                'model': SVR(),
+                'parameters': {
+                    'gamma': ['auto', 'scale']
+                }
+            },
+            'decision_tree': {
+                'model': DecisionTreeRegressor(),
+                'parameters': {
+                    'criterion' : ['friedman_mse'],
+                    'splitter': ['best', 'random']
+                }
+            },
+
+            'random_forest' : {
+                'model': RandomForestRegressor(criterion = 'squared_error'),
+                'parameters': {
+                    'n_estimators' : [5,10,15,20]
+                }
+            },
+            'knn': {
+                'model': KNeighborsRegressor(algorithm = 'auto'),
+                'parameters': {
+                    'n_neighbors': [2,5,10,20]
+                }
+            }
+        }
+        return models
+    def grid_preprocessor(self,data,models):
+        categorical_columns = [col for col in data.columns if data[col].dtypes == 'object']
+        numerical_columns = [col for col in data.columns if data[col].dtypes in ['float64', 'int64']]
+        
+        data = pd.get_dummies(data, columns = categorical_columns)
+        
+        features = data.drop('Sleep Quality', axis = 'columns')
+        labels = data['Sleep Quality']
+        scores = []
+        
+        for model_name,model_params in models.items():
+            gs = GridSearchCV(model_params['model'], model_params['parameters'], cv = 5, return_train_score=False)
+            gs.fit(features,labels)
+            scores.append({
+                'model' : model_name,
+                'best parameters': gs.best_params_,
+                'score': gs.best_score_
+            })
+        return pd.DataFrame(scores, columns=['model', 'best_parameters', 'score'])
         
         
         
@@ -122,7 +193,11 @@ sleep1 = sleeppredictions(data)
 #sleep1.dataset_description()
 #sleep1.show_specific_column('Age')
 #sleep1.identify_null_values()
-sleep1.divide_data_train_valid()
-sleep1.check_categorical_numerical_data()
+#leep1.divide_data_train_valid()
+#sleep1.check_categorical_numerical_data()
 #sleep1.data_preprocessing()
-sleep1.check_mutual_information(data)
+#sleep1.check_mutual_information(data)
+#sleep1.data_treatmente_pregrid(data)
+dict = sleep1.gridsearch_applying(data)
+dataframe = sleep1.grid_preprocessor(data, dict)
+print(dataframe)
