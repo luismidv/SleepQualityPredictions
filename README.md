@@ -1,8 +1,3 @@
-Since i have learned the basic of Machine learning, i want to keep upgrading the project 
-in order to make it as good as possible.
+The dataset is from kaggle, the only problem is that it is not too long so the accuracy obtained is not too real.
+The idea is to show the machine learning process and how to use different models in the same project.
 
-Next step is creating a dataset to make predictions with new values and see how the model behaves on predictions
-with new values out of the original dataset.
-
-After that, i will be comparing the model behaviour when using cross validation, considering we have a short dataset
-the behaviour should be correct.
