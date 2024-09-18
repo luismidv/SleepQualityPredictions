@@ -16,6 +16,9 @@ from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import Lasso
+from sklearn.model_selection import StratifiedKFold
+from sklearn.preprocessing import LabelEncoder
+
 
 class sleeppredictions:
     X_train = []
@@ -31,12 +34,14 @@ class sleeppredictions:
         
 
     def dataset_description(self):
+        """DATASET VALUES DESCRIPTION"""
         print(data.describe())
+        print(data.dtypes)
+        print(data.columns)
 
-    def show_specific_column(self,column):
-        print(data[column])
-    
     def identify_null_values(self):
+        """FUNCTION TO CHECK IF THE DATASET CONTAINS NULL VALUES ON ITS' COLUMNS
+        """
         columns_with_nulls = [col for col in data.columns if data[col].isnull().any() > 0]
         if len(columns_with_nulls) == 0:
             print("The dataset has no null value in it's columns")
@@ -44,6 +49,8 @@ class sleeppredictions:
             print(columns_with_nulls)
     
     def divide_data_train_valid(self):
+        """CREATING FEATURES AND LABELS
+           SPLTTING DATASET INTO TRAIN DATA AND TEST DATA(VALID)"""
         features_list = ['User ID','Age','Gender','Bedtime','Wake-up Time','Daily Steps','Calories Burned','Physical Activity Level','Dietary Habits','Sleep Disorders','Medication Usage']
         features = data[features_list]
         labels = data["Sleep Quality"]
@@ -54,6 +61,9 @@ class sleeppredictions:
         
     
     def check_categorical_numerical_data(self):
+        """IDENTIFYING CATEGORICAL AND NUMERICAL DATA
+           FILTERING CATEGORICAL DATA BY NOT HAVING < 10 POSSIBLE VALUES
+           APPLYING THIS FILTER TO THE TRAIN AND TEST DATA"""
         self.categorical_columns = [col for col in self.X_train.columns if self.X_train[col].dtype == 'object']
         self.categorical_filtered_columns = [col for col in self.X_train.columns if self.X_train[col].dtype == 'object' and self.X_train[col].nunique() < 10]
         self.numerical_columns = [col for col in self.X_train.columns if self.X_train[col].dtype in ['int64', 'float64']]
@@ -67,6 +77,10 @@ class sleeppredictions:
         self.X_valid = self.X_train[final_columns].copy()
 
     def data_preprocessing(self):
+        """CREATING PIPELINES FOR PROCESSING NUMERICAL AND CATEGORICAL DATA
+           DESIGNED A COLUMNTRANSFORMER FOR NUMERICAL AND CATEGORICAL DATA 
+           FINALLY APPLYING A RANDOM FOREST REGRESSOR TRAINING AND DOING PREDICTIONS"""
+           
         numerical_trasnformer = SimpleImputer(strategy = 'constant')
         categorical_transformer = Pipeline(steps = [
             ('imputer', SimpleImputer(strategy = 'most_frequent')),
@@ -96,6 +110,7 @@ class sleeppredictions:
         #print(mae)
 
     def check_mutual_information(self,data):
+        """FUNCTION TO CHECK MUTUAL INFORMATION IN THE DATASET SO WE CAN DO SOME GUESSINGS OF OUR DATA"""
         x = data.copy()
         y = x.pop('Sleep Quality')
         print(y)
@@ -120,6 +135,8 @@ class sleeppredictions:
         plt.show()
 
     def gridsearch_applying(self,data):
+        """CREATED A GRIDSEARCH FUNCTION SO WE CAN FIND WHAT MODELS GIVE US A BETTER ACCURACY
+           ON NEXT FUNCTION"""
         models = {
             'linear regression' : {
                 'model' : LinearRegression(),
@@ -165,26 +182,46 @@ class sleeppredictions:
         }
         return models
     def grid_preprocessor(self,data,models):
+        """GETTING EVERY MODEL ACCURACY WITH A GRIDSEARCH 
+            FINALLY RETURNING A DATAFRAME WITH SCORES, AND BEST PARAMETERS FOR EACH MODEL
+            CREATED THE KFOLD IN ORDER TO CHECK IF WOULD GIVE US A BETTER ACCURACY BUT WASN'T THE CASE"""
+        kFold = StratifiedKFold(n_splits = 5)
         categorical_columns = [col for col in data.columns if data[col].dtypes == 'object']
         numerical_columns = [col for col in data.columns if data[col].dtypes in ['float64', 'int64']]
         
         data = pd.get_dummies(data, columns = categorical_columns)
-        
+        """
+        for column in categorical_columns:
+            data[column] = LabelEncoder().fit_transform(data[column])
+        """
         features = data.drop('Sleep Quality', axis = 'columns')
         labels = data['Sleep Quality']
         scores = []
         
         for model_name,model_params in models.items():
-            gs = GridSearchCV(model_params['model'], model_params['parameters'], cv = 5, return_train_score=False)
+            gs = GridSearchCV(model_params['model'], model_params['parameters'], cv = 10, return_train_score=False)
             gs.fit(features,labels)
             scores.append({
                 'model' : model_name,
-                'best parameters': gs.best_params_,
+                'best_parameters': gs.best_params_,
                 'score': gs.best_score_
             })
+            
+            print("Test made for ", model_params['model'])
+            X_train, x_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=0)
+            predictions = gs.predict(x_test)
+            
+            print(predictions)
+            print("Y Values to train",y_train)
+            print("Y Values to test",y_test)
+        
         return pd.DataFrame(scores, columns=['model', 'best_parameters', 'score'])
+    
         
         
+    
+
+
         
 
 data = pd.read_csv('data/Health_Sleep_Statistics.csv')
